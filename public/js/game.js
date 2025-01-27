@@ -338,16 +338,16 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
         
         // check for collisions
         for (let id in playerGraphics) {
-            if (id != clientId) {
+            if (id != clientId && Date.now() - lastCollisionCheck > 60) {
                 if (distance(playerGraphics[id].player, playerGraphics[clientId].sword[0]) < 50) { // client kills player with id
                     killPlayer(id)
                     players[clientId].killCount += 1
                     players[clientId].rotationSpeed *= -1
-                } else if (Date.now() - lastCollisionCheck > 50 && doLineSegmentsIntersect(playerGraphics[id].player, playerGraphics[id].sword[0], playerGraphics[clientId].player, playerGraphics[clientId].sword[0])) { //swords connect and reflect backwards
+                } else if (doLineSegmentsIntersect(playerGraphics[id].player, playerGraphics[id].sword[0], playerGraphics[clientId].player, playerGraphics[clientId].sword[0])) { //swords connect and reflect backwards
                     players[id].rotationSpeed *= -1
                     players[clientId].rotationSpeed *= -1
-                    lastCollisionCheck = Date.now()
                 }
+                lastCollisionCheck = Date.now()
             }
         }
 
