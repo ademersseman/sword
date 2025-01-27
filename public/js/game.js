@@ -103,8 +103,24 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
         
         if (data.type === 'init') {
             clientId = data.clientId;
-            // Initialize players when the connection is established
             Object.assign(players, data.players);
+            players[clientId].x = Math.random() * mapSize
+            players[clientId].y = Math.random() * mapSize
+
+            let repeat = false
+            while (repeat) { // find a spawn point for the new player
+                repeat = false
+                for (let id in players) {
+                    if (distance(pos, players[id]) < 2 * swordRadius) {
+                        players[clientId].x = Math.random() * mapSize
+                        players[clientId].y = Math.random() * mapSize
+                        repeat = true
+                        break
+                    }
+                }
+            }
+            
+            // Initialize players when the connection is established
             for (let id in players) {
                 createPlayer(id);
             }

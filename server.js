@@ -1,5 +1,3 @@
-import { distance } from './geometry.js';
-
 const express = require('express');
 const WebSocket = require('ws');
 const path = require('path');
@@ -33,31 +31,15 @@ function broadcast(data) {
 wss.on('connection', (ws) => {
     console.log('New player connected');
 
+    // Generate a unique ID for the new player
     const clientId = Date.now(); // Simple unique ID based on time
-
-    const mapSize = 1000
     
     // Handle incoming messages (player movements)
     ws.on('message', (message) => {
         const data = JSON.parse(message);
         
         if (data.type === 'spawn') {
-            // Generate a unique ID for the new player
-            pos = {x: Math.random() * mapSize, y: Math.random() * mapSize}
-
-            let repeat = false
-            while (repeat) {
-                repeat = false
-                for (let id in players) {
-                    if (distance(pos, players[id]) < 300) {
-                        pos = {x: Math.random() * mapSize, y: Math.random() * mapSize}
-                        repeat = true
-                        break
-                    }
-                }
-            }
-
-            players[clientId] = { x: pos.x, y: pos.y, angle: 0, rotationSpeed: clientId % 2 == 0 ? 0.008:-0.008, killCount: 0 }; // Initial player position
+            players[clientId] = { x: 0, y: 0, angle: 0, rotationSpeed: clientId % 2 == 0 ? 0.008:-0.008, killCount: 0 }; // Initial player position
             
             // Send initial state to the new player
             ws.send(JSON.stringify({ type: 'init', players, clientId }));
