@@ -68,6 +68,7 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
 
     // Player and Sword graphics contexts
     const players = {};
+    let playerColor = 0
     const playerContext = new PIXI.GraphicsContext()
     .circle(0, 0, 50)
     
@@ -199,7 +200,8 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
         if (!players[id]) return
 
         const player = new PIXI.Graphics(playerContext);
-        player.fill(colorList[Math.floor(Math.random() * colorList.length)]); // Red color
+        player.fill(colorList[playerColor]);
+        playerColor += 1
         //player.fill(new PIXI.FillGradient(0, 0, 200, 200))
         player.x = app.screen.width / 2 + players[id].x - players[clientId].x;
         player.y = app.screen.height / 2 + players[id].y - players[clientId].y;
@@ -338,16 +340,17 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
         
         // check for collisions
         for (let id in playerGraphics) {
-            if (id != clientId && Date.now() - lastCollisionCheck > 60) {
+            if (id != clientId && Date.now() - lastCollisionCheck > 100) {
                 if (distance(playerGraphics[id].player, playerGraphics[clientId].sword[0]) < 50) { // client kills player with id
                     killPlayer(id)
                     players[clientId].killCount += 1
                     players[clientId].rotationSpeed *= -1
+                    lastCollisionCheck = Date.now()
                 } else if (doLineSegmentsIntersect(playerGraphics[id].player, playerGraphics[id].sword[0], playerGraphics[clientId].player, playerGraphics[clientId].sword[0])) { //swords connect and reflect backwards
                     players[id].rotationSpeed *= -1
                     players[clientId].rotationSpeed *= -1
+                    lastCollisionCheck = Date.now()
                 }
-                lastCollisionCheck = Date.now()
             }
         }
 
