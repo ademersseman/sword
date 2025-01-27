@@ -93,7 +93,7 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
     let targetPosition = { x: app.screen.width / 2, y: app.screen.height / 2 }; // Target position for movement
     
     // Connect to WebSocket server
-    const socket = new WebSocket('ws://localhost:80/');
+    const socket = new WebSocket('ws:ec2-3-16-79-116.us-east-2.compute.amazonaws.com:80');
     
     socket.onopen = () => {
         console.log('Connected to server');
@@ -107,12 +107,12 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
             Object.assign(players, data.players);
             players[clientId].x = Math.random() * mapSize
             players[clientId].y = Math.random() * mapSize
-
+            
             let repeat = false
             while (repeat) { // find a spawn point for the new player
                 repeat = false
                 for (let id in players) {
-                    if (distance(pos, players[id]) < 2 * swordRadius) {
+                    if (id != clientId && distance(players[clientId], players[id]) < 2 * swordRadius) {
                         players[clientId].x = Math.random() * mapSize
                         players[clientId].y = Math.random() * mapSize
                         repeat = true
@@ -347,7 +347,7 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
                     players[clientId].rotationSpeed *= -1
                     lastCollisionCheck = Date.now()
                 } else if (doLineSegmentsIntersect(playerGraphics[id].player, playerGraphics[id].sword[0], playerGraphics[clientId].player, playerGraphics[clientId].sword[0])) { //swords connect and reflect backwards
-                    //players[id].rotationSpeed *= -1
+                    players[id].rotationSpeed *= -1
                     players[clientId].rotationSpeed *= -1
                     lastCollisionCheck = Date.now()
                 }
