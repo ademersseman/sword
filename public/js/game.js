@@ -92,7 +92,7 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
     let targetPosition = { x: app.screen.width / 2, y: app.screen.height / 2 }; // Target position for movement
     
     // Connect to WebSocket server
-    const socket = new WebSocket('ws:ec2-3-16-79-116.us-east-2.compute.amazonaws.com');
+    const socket = new WebSocket('ws://localhost:80/');
     
     socket.onopen = () => {
         console.log('Connected to server');
@@ -328,10 +328,10 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
             const dx = targetPosition.x - playerGraphics[clientId].player.x;
             const dy = targetPosition.y - playerGraphics[clientId].player.y;
             //shift background
-            background.x = Math.min(Math.max(-mapSize, background.x - (dx / d) * speed), 0)
             players[clientId].x = Math.min(Math.max(0, players[clientId].x + (dx / d) * speed), mapSize)
-            background.y = Math.min(Math.max(-mapSize, background.y - (dy / d) * speed), 0)
+            background.x = -players[clientId].x
             players[clientId].y = Math.min(Math.max(0, players[clientId].y + (dy / d) * speed), mapSize)
+            background.y = -players[clientId].y
             coord.text = '(' + Math.round(players[clientId].x) + ', ' + Math.round(players[clientId].y) + ')'
             coord.x = app.screen.width - 10 - coord.width
         }
