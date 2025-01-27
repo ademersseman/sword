@@ -201,7 +201,7 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
 
         const player = new PIXI.Graphics(playerContext);
         player.fill(colorList[playerColor]);
-        playerColor += 1
+        playerColor = (playerColor + 1) % colorList.length
         //player.fill(new PIXI.FillGradient(0, 0, 200, 200))
         player.x = app.screen.width / 2 + players[id].x - players[clientId].x;
         player.y = app.screen.height / 2 + players[id].y - players[clientId].y;
@@ -347,7 +347,7 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
                     players[clientId].rotationSpeed *= -1
                     lastCollisionCheck = Date.now()
                 } else if (doLineSegmentsIntersect(playerGraphics[id].player, playerGraphics[id].sword[0], playerGraphics[clientId].player, playerGraphics[clientId].sword[0])) { //swords connect and reflect backwards
-                    players[id].rotationSpeed *= -1
+                    //players[id].rotationSpeed *= -1
                     players[clientId].rotationSpeed *= -1
                     lastCollisionCheck = Date.now()
                 }
