@@ -14,7 +14,6 @@
     "@pixi/math-extras": "^7.4.2",
     "canvas": "^3.0.1",
     "express": "^4.21.2",
-    "gl": "^8.1.6",
     "pixi-filters": "^6.1.0",
     "pixi.js": "^8.7.0",
     "ws": "^8.18.0"

@@ -92,7 +92,7 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
     let targetPosition = { x: app.screen.width / 2, y: app.screen.height / 2 }; // Target position for movement
     
     // Connect to WebSocket server
-    const socket = new WebSocket('ws://localhost:3000');
+    const socket = new WebSocket('ws:ec2-3-16-79-116.us-east-2.compute.amazonaws.com');
     
     socket.onopen = () => {
         console.log('Connected to server');
@@ -110,7 +110,11 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
             }
         }
         if (data.type === 'update' && data.players[clientId] != null) {
-            Object.assign(players, data.players);
+            for (let id in data.players) { // update every player except the client with server information
+                if (id != clientId) {
+                    players[id] = data.players[id]
+                }
+            }
             for (let id in players) { // create new players
                 if (!playerGraphics[id]) {
                     createPlayer(id);
@@ -217,9 +221,9 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
             if (playerGraphics[id] && players[id] && players[clientId]) {
                 playerGraphics[id].player.x = app.screen.width / 2 + players[id].x - players[clientId].x
                 playerGraphics[id].player.y = app.screen.height / 2 + players[id].y - players[clientId].y
+                playerGraphics[id].killCount.text = players[id].killCount
                 playerGraphics[id].killCount.x = playerGraphics[id].player.x - playerGraphics[id].killCount.width / 2
                 playerGraphics[id].killCount.y = playerGraphics[id].player.y - playerGraphics[id].killCount.height / 2
-                playerGraphics[id].killCount.text = players[id].killCount
                 for (let i = 0; i < 30; i++) {
                     if (players[id].rotationSpeed > 0) {
                         playerGraphics[id].sword[i].angle = players[id].angle - i/30

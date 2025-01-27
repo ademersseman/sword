@@ -1,28 +1,24 @@
+import { distance } from './geometry.js';
+
 const express = require('express');
 const WebSocket = require('ws');
 const path = require('path');
 
 const app = express();
-const port = 3000;
+const port = 80;
 
 // Serve static files (index.html, JS, CSS) from the "public" directory
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Start the HTTP server (Express) for serving the HTML and assets
 const server = app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
+    console.log(`Server running on port ${port}`);
 });
 
 // Set up WebSocket server on the same HTTP server
 const wss = new WebSocket.Server({ server });
 
 let players = {}; // Object to store player data (e.g., positions)
-
-function distance(pos1, pos2) {
-    const dx = pos1.x - pos2.x;
-    const dy = pos1.y - pos2.y;
-    return Math.hypot(dx, dy)
-}
 
 // Broadcast updates to all clients
 function broadcast(data) {
