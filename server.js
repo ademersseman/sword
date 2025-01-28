@@ -69,7 +69,7 @@ wss.on('connection', (ws) => {
 
         if (data.type === 'collision') {
             // remove the player player position
-            if (Date.now() - collisionTimer[data.id1] > 50 && Date.now() - collisionTimer[data.id2] > 50) {
+            if (Date.now() - collisionTimer[data.id1] > 200 && Date.now() - collisionTimer[data.id2] > 200) {
                 collisionTimer[data.id1] = Date.now()
                 collisionTimer[data.id2] = Date.now()
                 broadcast({ type: 'collision', id1: data.id1, id2: data.id2 });

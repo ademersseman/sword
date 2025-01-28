@@ -138,7 +138,7 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
                 }
             }
             // Update players' positions based on server data
-            updatePlayers();
+            //updatePlayers();
         }
         if (data.type === 'kill') {
             killPlayer(data.id)
@@ -325,8 +325,10 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
     app.ticker.add((delta) => {
         if (!players[clientId]) return;
 
-        players[clientId].angle += delta.deltaTime * players[clientId].rotationSpeed;
-
+        for (let id in players) {
+            players[id].angle += delta.deltaTime * players[id].rotationSpeed;
+        }
+        
         //move client
         const d = distance(targetPosition, playerGraphics[clientId].player)
         if (d > 50) { // speed may change based on player computer speed
@@ -342,18 +344,18 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
             coord.text = '(' + Math.round(players[clientId].x) + ', ' + Math.round(players[clientId].y) + ')'
             coord.x = app.screen.width - 10 - coord.width
         }
+
+        updatePlayers()
         
         // check for collisions
         for (let id in playerGraphics) {
-            if (id != clientId && Date.now() - lastCollisionCheck > 50) {
+            if (id != clientId && Date.now() - lastCollisionCheck > 200) {
                 if (distance(playerGraphics[id].player, playerGraphics[clientId].sword[0]) < 50) { // client kills player with id
                     killPlayer(id)
                     players[clientId].killCount += 1
                     players[clientId].rotationSpeed *= -1
                     lastCollisionCheck = Date.now()
                 } else if (doLineSegmentsIntersect(playerGraphics[id].player, playerGraphics[id].sword[0], playerGraphics[clientId].player, playerGraphics[clientId].sword[0])) { //swords connect and reflect backwards
-                    //players[id].rotationSpeed *= -1
-                    //players[clientId].rotationSpeed *= -1
                     lastCollisionCheck = Date.now()
                     socket.send(JSON.stringify({
                         type: 'collision',
@@ -363,6 +365,7 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
                 }
             }
         }
+
 
         if (players[clientId]) { // update server with player movement
             socket.send(JSON.stringify({
