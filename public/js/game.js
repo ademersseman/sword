@@ -320,19 +320,19 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
     app.ticker.add((delta) => {
         if (!players[clientId]) return;
 
-        players[clientId].angle += delta.deltaTime * players[clientId].rotationSpeed * 10;
+        players[clientId].angle += delta.deltaTime * players[clientId].rotationSpeed;
 
         //move client
         const d = distance(targetPosition, playerGraphics[clientId].player)
         if (d > 50) { // speed may change based on player computer speed
             // Smooth player movement towards the target position
-            const speed = 2;
+            const speed = 5;
             const dx = targetPosition.x - playerGraphics[clientId].player.x;
             const dy = targetPosition.y - playerGraphics[clientId].player.y;
             //shift background
-            players[clientId].x = Math.min(Math.max(0, players[clientId].x + (dx / d) * speed), mapSize)
+            players[clientId].x = Math.min(Math.max(0, players[clientId].x + (dx / d) * speed * delta.deltaTime), mapSize)
             background.x = -players[clientId].x
-            players[clientId].y = Math.min(Math.max(0, players[clientId].y + (dy / d) * speed), mapSize)
+            players[clientId].y = Math.min(Math.max(0, players[clientId].y + (dy / d) * speed * delta.deltaTime), mapSize)
             background.y = -players[clientId].y
             coord.text = '(' + Math.round(players[clientId].x) + ', ' + Math.round(players[clientId].y) + ')'
             coord.x = app.screen.width - 10 - coord.width

@@ -39,7 +39,7 @@ wss.on('connection', (ws) => {
         const data = JSON.parse(message);
         
         if (data.type === 'spawn') {
-            players[clientId] = { x: -1000, y: -1000, angle: 0, rotationSpeed: clientId % 2 == 0 ? 0.008:-0.008, killCount: 0 }; // Initial player position
+            players[clientId] = { x: -1000, y: -1000, angle: 0, rotationSpeed: clientId % 2 == 0 ? 0.08:-0.08, killCount: 0 }; // Initial player position
             
             // Send initial state to the new player
             ws.send(JSON.stringify({ type: 'init', players, clientId }));
@@ -64,8 +64,6 @@ wss.on('connection', (ws) => {
             // Broadcast kill player to all clients
             broadcast({ type: 'kill', id: data.id });
         }
-
-
     });
 
     // Handle connection close
