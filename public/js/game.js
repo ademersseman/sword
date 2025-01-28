@@ -93,7 +93,7 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
     let targetPosition = { x: app.screen.width / 2, y: app.screen.height / 2 }; // Target position for movement
     
     // Connect to WebSocket server
-    const socket = new WebSocket('ws:ec2-3-16-79-116.us-east-2.compute.amazonaws.com:80');
+    const socket = new WebSocket('ws://localhost:80');
     
     socket.onopen = () => {
         console.log('Connected to server');
@@ -143,6 +143,11 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
         if (data.type === 'kill') {
             killPlayer(data.id)
         }
+        if (data.type === 'collision') {
+            players[data.id1].rotationSpeed *= -1
+            players[data.id2].rotationSpeed *= -1
+        }
+
     };
     
     //main menu logic
@@ -340,16 +345,21 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
         
         // check for collisions
         for (let id in playerGraphics) {
-            if (id != clientId && Date.now() - lastCollisionCheck > 60) {
+            if (id != clientId && Date.now() - lastCollisionCheck > 50) {
                 if (distance(playerGraphics[id].player, playerGraphics[clientId].sword[0]) < 50) { // client kills player with id
                     killPlayer(id)
                     players[clientId].killCount += 1
                     players[clientId].rotationSpeed *= -1
                     lastCollisionCheck = Date.now()
                 } else if (doLineSegmentsIntersect(playerGraphics[id].player, playerGraphics[id].sword[0], playerGraphics[clientId].player, playerGraphics[clientId].sword[0])) { //swords connect and reflect backwards
-                    players[id].rotationSpeed *= -1
-                    players[clientId].rotationSpeed *= -1
+                    //players[id].rotationSpeed *= -1
+                    //players[clientId].rotationSpeed *= -1
                     lastCollisionCheck = Date.now()
+                    socket.send(JSON.stringify({
+                        type: 'collision',
+                        id1: clientId,
+                        id2: id,
+                    }));
                 }
             }
         }

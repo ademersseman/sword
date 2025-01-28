@@ -17,6 +17,7 @@ const server = app.listen(port, () => {
 const wss = new WebSocket.Server({ server });
 
 let players = {}; // Object to store player data (e.g., positions)
+let collisionTimer = {}
 
 // Broadcast updates to all clients
 function broadcast(data) {
@@ -40,6 +41,7 @@ wss.on('connection', (ws) => {
         
         if (data.type === 'spawn') {
             players[clientId] = { x: -1000, y: -1000, angle: 0, rotationSpeed: clientId % 2 == 0 ? 0.08:-0.08, killCount: 0 }; // Initial player position
+            collisionTimer[clientId] = Date.now()
             
             // Send initial state to the new player
             ws.send(JSON.stringify({ type: 'init', players, clientId }));
@@ -64,12 +66,23 @@ wss.on('connection', (ws) => {
             // Broadcast kill player to all clients
             broadcast({ type: 'kill', id: data.id });
         }
+
+        if (data.type === 'collision') {
+            // remove the player player position
+            if (Date.now() - collisionTimer[data.id1] > 50 && Date.now() - collisionTimer[data.id2] > 50) {
+                collisionTimer[data.id1] = Date.now()
+                collisionTimer[data.id2] = Date.now()
+                broadcast({ type: 'collision', id1: data.id1, id2: data.id2 });
+            }
+        }
+
     });
 
     // Handle connection close
     ws.on('close', () => {
         console.log('Player disconnected');
         delete players[clientId]
+        delete collisionTimer[clientId]
         broadcast({ type: 'kill', clientId });
     });
 });
