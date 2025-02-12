@@ -11,11 +11,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@pixi/filter-motion-blur": "^5.1.1",
-    "@pixi/math-extras": "^7.4.2",
     "canvas": "^3.0.1",
     "express": "^4.21.2",
-    "pixi-filters": "^6.1.0",
     "pixi.js": "^8.7.0",
     "ws": "^8.18.0"
   }
