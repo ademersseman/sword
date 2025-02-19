@@ -30,8 +30,6 @@ function broadcast(data) {
 
 // WebSocket server connection handler
 wss.on('connection', (ws) => {
-    console.log('New player connected');
-
     // Generate a unique ID for the new player
     const clientId = Date.now(); // Simple unique ID based on time
     
@@ -80,7 +78,6 @@ wss.on('connection', (ws) => {
 
     // Handle connection close
     ws.on('close', () => {
-        console.log('Player disconnected');
         delete players[clientId]
         delete collisionTimer[clientId]
         broadcast({ type: 'kill', clientId });

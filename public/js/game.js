@@ -261,16 +261,16 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
             if (players[id].rotationSpeed > 0) { // draw the sword arc
                 playerGraphics[id].swordArc.arc(0, 0, swordRadius, 0, -Math.PI/4, true)
                 playerGraphics[id].swordArc.lineTo(0, 0)
-                const gradientFill = new PIXI.FillGradient(0, 0, 150, 150);
+                const gradientFill = new PIXI.FillGradient(0, 0, 1, 1);
                 gradientFill.addColorStop(1, 0xFFD700);
                 gradientFill.addColorStop(0, 0x252620);
                 playerGraphics[id].swordArc.fill(gradientFill)
             } else {
                 playerGraphics[id].swordArc.arc(0, 0, swordRadius, Math.PI/4, 0, true)
                 playerGraphics[id].swordArc.lineTo(0, 0)
-                const gradientFill = new PIXI.FillGradient(0, 0, 150, -150);
+                const gradientFill = new PIXI.FillGradient(0, 0, 1, -1);
                 gradientFill.addColorStop(1, 0xFFD700);
-                gradientFill.addColorStop(0, 0x252620);   
+                gradientFill.addColorStop(0, 0x252620);
                 playerGraphics[id].swordArc.fill(gradientFill)
             }
             playerGraphics[id].swordArc.x = playerGraphics[id].player.x
@@ -346,7 +346,6 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
         targetPosition = event.data.global; // Set the new target position
     });
 
-    let lastCollisionCheck = 0
     // Main game loop to update sword position
     app.ticker.add((delta) => {
         if (!players[clientId]) return;
@@ -375,14 +374,12 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
         
         // check for collisions
         for (let id in playerGraphics) {
-            if (id != clientId && Date.now() - lastCollisionCheck > 200) {
-                if (distance(playerGraphics[id].player, playerGraphics[clientId].sword) < playerRadius) { // client kills player with id
+            if (id != clientId) {
+                if (distance(playerGraphics[id].player, playerGraphics[clientId].sword) < playerRadius || distance(playerGraphics[id].player, {x: playerGraphics[clientId].player.x + Math.cos(playerGraphics[clientId].sword.angle) * swordRadius / 2, y: playerGraphics[clientId].player.y + Math.sin(playerGraphics[clientId].sword.angle) * swordRadius / 2}) < playerRadius || distance(playerGraphics[id].player, playerGraphics[clientId].player) < 2 * playerRadius) { // client kills player with id due to collision or 
                     killPlayer(id)
                     players[clientId].killCount += 1
                     players[clientId].rotationSpeed *= -1
-                    lastCollisionCheck = Date.now()
                 } else if (doLineSegmentsIntersect(playerGraphics[id].player, playerGraphics[id].sword, playerGraphics[clientId].player, playerGraphics[clientId].sword)) { //swords connect and reflect backwards
-                    lastCollisionCheck = Date.now()
                     socket.send(JSON.stringify({
                         type: 'collision',
                         id1: clientId,
