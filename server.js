@@ -55,14 +55,10 @@ wss.on('connection', (ws) => {
             broadcast({ type: 'update', players });
         }
         
-        if (data.type === 'kill') {
-            // remove the player player position
-            if (players[data.id]) {
-                delete players[data.id]
-            }
-            
+        if (data.type === 'kill' && players[data.victimId] && players[data.killerId]) {          
             // Broadcast kill player to all clients
-            broadcast({ type: 'kill', id: data.id });
+            delete players[data.victimId]
+            broadcast({ type: 'kill', victimId: data.victimId,  });
         }
 
         if (data.type === 'collision') {
