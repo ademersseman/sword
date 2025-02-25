@@ -5,6 +5,25 @@ export function distance(pos1, pos2) {
     return Math.hypot(dx, dy)
 }
 
+export function getIntersectionPoint(p1, p2, p3, p4) {
+    const denom = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x);
+    if (denom === 0) {
+        return null; // Lines are parallel
+    }
+
+    const intersectX = ((p1.x * p2.y - p1.y * p2.x) * (p3.x - p4.x) - (p1.x - p2.x) * (p3.x * p4.y - p3.y * p4.x)) / denom;
+    const intersectY = ((p1.x * p2.y - p1.y * p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x * p4.y - p3.y * p4.x)) / denom;
+
+    const intersectionPoint = { x: intersectX, y: intersectY };
+
+    // Check if the intersection point lies on both segments
+    if (onSegment(p1, intersectionPoint, p2) && onSegment(p3, intersectionPoint, p4)) {
+        return intersectionPoint;
+    }
+
+    return null; // If intersection point is not on both segments
+}
+
 export function doLineSegmentsIntersect(p1, p2, p3, p4) {
     // Compute the four orientations needed for the general and special cases
     const o1 = orientation(p1, p2, p3);

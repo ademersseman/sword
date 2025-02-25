@@ -1,4 +1,4 @@
-import { distance, doLineSegmentsIntersect } from './geometry.js';
+import { distance, doLineSegmentsIntersect, getIntersectionPoint } from './geometry.js';
 
 (async () =>
 {
@@ -67,6 +67,7 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
     app.stage.addChild(yourRank)
 
     // Player and Sword graphics contexts
+    const color = {};
     const players = {};
     const playerRadius = 50
     
@@ -84,11 +85,7 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
     // Connect to WebSocket server
     //const socket = new WebSocket('ws://localhost:80');
     const socket = new WebSocket('wss://superballs.lol');
-    
-    socket.onopen = () => {
-        console.log('Connected to server');
-    };
-    
+        
     socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
         
@@ -113,29 +110,38 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
             
             // Initialize players when the connection is established
             for (let id in players) {
-                createPlayer(id);
+                createPlayerGraphic(id);
             }
         }
-        if (data.type === 'update' && data.players[clientId] != null) {
-            for (let id in data.players) { // update every player except the client with server information
-                if (id != clientId) {
-                    players[id] = data.players[id]
+        if (players[clientId]) {
+            if (data.type === 'update') {
+                for (let id in data.players) { // update every player except the client with server information
+                    if (id != clientId) {
+                        players[id] = data.players[id]
+                        if (!playerGraphics[id]) {
+                            createPlayerGraphic(id);
+                        }
+                    }
                 }
             }
-            for (let id in players) { // create new players
-                if (!playerGraphics[id]) {
-                    createPlayer(id);
+            if (data.type === 'kill') {
+                if (data.killerId === clientId) {
+                    players[clientId].killCount += 1
+                    players[clientId].rotationSpeed *= -1
                 }
+                killPlayer(data.victimId)
+            }
+            if (data.type === 'collision') {
+                players[data.id1].rotationSpeed *= -1
+                players[data.id2].rotationSpeed *= -1
+                //calculate the intersection point of 
+                let intersection = getIntersectionPoint(playerGraphics[data.id1].player, playerGraphics[data.id1].sword, playerGraphics[data.id2].player, playerGraphics[data.id2].sword)
+                if (intersection === null) {
+                    intersection = getIntersectionPoint(playerGraphics[data.id2].player, playerGraphics[data.id2].sword, playerGraphics[data.id1].sword, playerGraphics[data.id1].sword.prev)
+                }
+                createSparks(intersection ? intersection : playerGraphics[clientId].sword)
             }
         }
-        if (data.type === 'kill') {
-            killPlayer(data.victimId)
-        }
-        if (data.type === 'collision') {
-            players[data.id1].rotationSpeed *= -1
-            players[data.id2].rotationSpeed *= -1
-        }
-
     };
     
     //main menu logic
@@ -189,11 +195,10 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
     await menu()
 
     // Create a player and all graphical components
-    function createPlayer(id) {
-        if (!players[id]) return
-
+    function createPlayerGraphic(id) {
         const player = new PIXI.Graphics().circle(0, 0, playerRadius);
-        player.fill(Math.floor(Math.random() * 0xFFFFFF));
+        color[id] = Math.random() * 0xFFFFFF
+        player.fill(Math.floor(color[id]));
         player.x = app.screen.width / 2 + players[id].x - players[clientId].x;
         player.y = app.screen.height / 2 + players[id].y - players[clientId].y;
         player.filters = new PIXI.BlurFilter({ strength: 2 });
@@ -242,50 +247,53 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
     }
 
 
-    // Update all players' positions and sword rotation
+    // Update all players' positions, sword rotation, kill count
     function updatePlayerGraphic(id) {
-        if (playerGraphics[id] && players[id] && players[clientId]) {
-            playerGraphics[id].player.x = app.screen.width / 2 + players[id].x - players[clientId].x
-            playerGraphics[id].player.y = app.screen.height / 2 + players[id].y - players[clientId].y
-            playerGraphics[id].killCount.text = players[id].killCount
-            playerGraphics[id].killCount.x = playerGraphics[id].player.x - playerGraphics[id].killCount.width / 2
-            playerGraphics[id].killCount.y = playerGraphics[id].player.y - playerGraphics[id].killCount.height / 2
-            
-            playerGraphics[id].sword.angle = players[id].angle
-            playerGraphics[id].sword.x = playerGraphics[id].player.x + Math.cos(playerGraphics[id].sword.angle) * swordRadius;
-            playerGraphics[id].sword.y = playerGraphics[id].player.y + Math.sin(playerGraphics[id].sword.angle) * swordRadius;
-            playerGraphics[id].sword.rotation = playerGraphics[id].sword.angle + Math.PI / 2
-            
-            
-            app.stage.removeChild(playerGraphics[id].swordArc);
-            playerGraphics[id].swordArc = new PIXI.Graphics()
-            if (players[id].rotationSpeed > 0) { // draw the sword arc
-                playerGraphics[id].swordArc.arc(0, 0, swordRadius, 0, -Math.PI/4, true)
-                playerGraphics[id].swordArc.lineTo(0, 0)
-                const gradientFill = new PIXI.FillGradient(0, 0, 1, 1);
-                gradientFill.addColorStop(1, 0xFFD700);
-                gradientFill.addColorStop(0, 0x252620);
-                playerGraphics[id].swordArc.fill(gradientFill)
-            } else {
-                playerGraphics[id].swordArc.arc(0, 0, swordRadius, Math.PI/4, 0, true)
-                playerGraphics[id].swordArc.lineTo(0, 0)
-                const gradientFill = new PIXI.FillGradient(0, 0, 1, -1);
-                gradientFill.addColorStop(1, 0xFFD700);
-                gradientFill.addColorStop(0, 0x252620);
-                playerGraphics[id].swordArc.fill(gradientFill)
-            }
-            playerGraphics[id].swordArc.x = playerGraphics[id].player.x
-            playerGraphics[id].swordArc.y = playerGraphics[id].player.y
-            playerGraphics[id].swordArc.alpha = 0.5
-            playerGraphics[id].swordArc.angle = players[id].angle * 360 / (2 * Math.PI)
-            
-            playerGraphics[id].swordArc.zIndex = 0
-            playerGraphics[id].killCount.zIndex = 1
-            playerGraphics[id].player.zIndex = 1
-            playerGraphics[id].sword.zIndex = 1
-            app.stage.addChild(playerGraphics[id].swordArc);
-            app.stage.sortChildren();
+        playerGraphics[id].player.x = app.screen.width / 2 + players[id].x - players[clientId].x
+        playerGraphics[id].player.y = app.screen.height / 2 + players[id].y - players[clientId].y
+        playerGraphics[id].killCount.text = players[id].killCount
+        playerGraphics[id].killCount.x = playerGraphics[id].player.x - playerGraphics[id].killCount.width / 2
+        playerGraphics[id].killCount.y = playerGraphics[id].player.y - playerGraphics[id].killCount.height / 2
+        
+        playerGraphics[id].sword.angle = players[id].angle
+        playerGraphics[id].sword.x = playerGraphics[id].player.x + Math.cos(playerGraphics[id].sword.angle) * swordRadius;
+        playerGraphics[id].sword.y = playerGraphics[id].player.y + Math.sin(playerGraphics[id].sword.angle) * swordRadius;
+        //prev and sword connect to form a line that is used as collision bounds for the sword
+        if (id == clientId) {
+            playerGraphics[clientId].sword.prev = {x: players[clientId].rotationSpeed < 0 ? playerGraphics[clientId].player.x + Math.cos(playerGraphics[clientId].sword.angle + Math.PI / 16) * swordRadius : playerGraphics[clientId].player.x + Math.cos(playerGraphics[clientId].sword.angle - Math.PI / 16) * swordRadius, y: players[clientId].rotationSpeed < 0 ? playerGraphics[clientId].player.y + Math.sin(playerGraphics[clientId].sword.angle + Math.PI / 16) * swordRadius : playerGraphics[clientId].player.y + Math.sin(playerGraphics[clientId].sword.angle - Math.PI / 16) * swordRadius}
         }
+        playerGraphics[id].sword.rotation = playerGraphics[id].sword.angle + Math.PI / 2
+        
+        //remove and add sword arc again
+        app.stage.removeChild(playerGraphics[id].swordArc);
+        playerGraphics[id].swordArc = new PIXI.Graphics()
+        if (players[id].rotationSpeed > 0) { // draw the sword arc
+            playerGraphics[id].swordArc.arc(0, 0, swordRadius, 0, -Math.PI/4, true)
+            playerGraphics[id].swordArc.lineTo(0, 0)
+            const gradientFill = new PIXI.FillGradient(0, 0, 1, 1);
+            gradientFill.addColorStop(1, 0xFFD700);
+            gradientFill.addColorStop(0, 0x252620);
+            playerGraphics[id].swordArc.fill(gradientFill)
+        } else {
+            playerGraphics[id].swordArc.arc(0, 0, swordRadius, Math.PI/4, 0, true)
+            playerGraphics[id].swordArc.lineTo(0, 0)
+            const gradientFill = new PIXI.FillGradient(0, 0, 1, -1);
+            gradientFill.addColorStop(1, 0xFFD700);
+            gradientFill.addColorStop(0, 0x252620);
+            playerGraphics[id].swordArc.fill(gradientFill)
+        }
+        playerGraphics[id].swordArc.x = playerGraphics[id].player.x
+        playerGraphics[id].swordArc.y = playerGraphics[id].player.y
+        playerGraphics[id].swordArc.alpha = 0.5
+        playerGraphics[id].swordArc.angle = players[id].angle * 360 / (2 * Math.PI)
+        
+        playerGraphics[id].swordArc.zIndex = 0
+        playerGraphics[id].killCount.zIndex = 1
+        playerGraphics[id].player.zIndex = 1
+        playerGraphics[id].sword.zIndex = 1
+        app.stage.addChild(playerGraphics[id].swordArc);
+        app.stage.sortChildren();
+
         updateLeaderboard()
     }
 
@@ -304,35 +312,29 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
     }
 
     //removes a players graphic components
-    function removePlayerGraphic(id) {
-        const {player, sword, swordArc, killCount} = playerGraphics[id];
+    function removePlayerGraphic(victimId) {
+        const {player, sword, swordArc, killCount} = playerGraphics[victimId];
         app.stage.removeChild(player);  // Remove player graphic
         app.stage.removeChild(killCount)
         app.stage.removeChild(sword);   // Remove sword graphic
         app.stage.removeChild(swordArc);
         
         // Delete the player from the dicts
-        delete players[id];
-        delete playerGraphics[id];
+        delete color[victimId]
+        delete players[victimId];
+        delete playerGraphics[victimId];
     }
 
     //executed when a player is killed
-    function killPlayer(id) {
-        if (!playerGraphics[id]) return;
-
+    function killPlayer(victimId) {
         // Remove the player and sword from the stage
-        removePlayerGraphic(id)
+        createSparks(playerGraphics[victimId].player, true, victimId)
+        removePlayerGraphic(victimId)
         
-        socket.send(JSON.stringify({
-            type: 'kill',
-            killerId: clientId,
-            victimId: id,
-        }));
-
-        if (id == clientId) {
+        if (victimId == clientId) {
             //remove all player graphics
-            for (let id0 in playerGraphics) {
-                removePlayerGraphic(id0)
+            for (let id in playerGraphics) {
+                removePlayerGraphic(id)
             }
             menu();
         }
@@ -340,7 +342,11 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
 
     //kill the client player on refresh
     window.addEventListener("beforeunload", () => {
-        killPlayer(clientId);
+        socket.send(JSON.stringify({
+            type: 'kill',
+            killerId: clientId,
+            victimId: clientId,
+        }));
     })
 
     // Handle mouse movement to send to server
@@ -348,12 +354,48 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
         targetPosition = event.data.global; // Set the new target position
     });
 
+    // Function to generate sparks on sword clash
+    function createSparks(sword, playerDeath = false, id = null) {
+        const sparkCount = playerDeath ? 60 : 20; // More sparks for larger effect
+        const sparkSize = playerDeath ? 10 : 1; // Larger sparks when 'isLargeSparks' is true
+        const sparkColor = playerDeath ? color[id] : 0xFFD700; // Use victim's color for large sparks
+
+        for (let i = 0; i < sparkCount; i++) {
+            const spark = new PIXI.Graphics();
+            spark.beginFill(sparkColor); // Spark color (gold)
+            spark.drawCircle(sword.x, sword.y, sparkSize + Math.random() * 4); // Random spark size
+            spark.endFill();
+
+            // Add random velocity to the sparks
+            const angle = Math.random() * Math.PI * 2; // Random angle
+            const speed = playerDeath? Math.random() * 5: Math.random() * 5 + 5; // Random speed
+            spark.vx = Math.cos(angle) * speed;
+            spark.vy = Math.sin(angle) * speed;
+
+            // Add spark to the stage
+            app.stage.addChild(spark);
+
+            // Animate the spark (move and fade out)
+            app.ticker.add(function animateSpark() {
+                spark.x += spark.vx;
+                spark.y += spark.vy;
+                spark.alpha -= playerDeath ? 0.01 : 0.05; // Fade out
+                spark.scale.x *= 0.95; // Shrink
+                spark.scale.y *= 0.95;
+
+                // Remove spark once it's fully faded out
+                if (spark.alpha <= 0) {
+                    app.stage.removeChild(spark);
+                }
+            });
+        }
+    }
+
     // Main game loop to update sword position
-    let lastKillTime = 0
     app.ticker.add((delta) => {
         if (!players[clientId]) return;
 
-        for (let id in players) {
+        for (let id in players) { //change angle of every players sword
             players[id].angle += delta.deltaTime * players[id].rotationSpeed;
             updatePlayerGraphic(id)
         }
@@ -361,8 +403,8 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
         //move client
         const d = distance(targetPosition, playerGraphics[clientId].player)
         if (d > 30) { // speed may change based on player computer speed
-            // Smooth player movement towards the target position
             const speed = 5;
+            // Smooth player movement towards the target position
             const dx = targetPosition.x - playerGraphics[clientId].player.x;
             const dy = targetPosition.y - playerGraphics[clientId].player.y;
             //shift background
@@ -377,13 +419,16 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
         
         // check for collisions
         for (let id in playerGraphics) {
-            if (Date.now() - lastKillTime > 50 && players[clientId] && players[id] && id != clientId) {
-                if (distance(playerGraphics[id].player, playerGraphics[clientId].sword) < playerRadius || distance(playerGraphics[id].player, {x: playerGraphics[clientId].player.x + Math.cos(playerGraphics[clientId].sword.angle) * swordRadius / 2, y: playerGraphics[clientId].player.y + Math.sin(playerGraphics[clientId].sword.angle) * swordRadius / 2}) < playerRadius || distance(playerGraphics[id].player, playerGraphics[clientId].player) < 2 * playerRadius) { // client kills player with id due to collision or 
-                    killPlayer(id)
-                    players[clientId].killCount += 1
-                    players[clientId].rotationSpeed *= -1
-                    lastKillTime = Date.now()
-                } else if (doLineSegmentsIntersect(playerGraphics[id].player, playerGraphics[id].sword, playerGraphics[clientId].player, playerGraphics[clientId].sword)) { //swords connect and reflect backwards
+            if (id != clientId) {
+                //checks if tip or a point halfway towards the tip intersects another player or if a player body intersects the client body
+                if (distance(playerGraphics[id].player, playerGraphics[clientId].sword) < playerRadius || distance(playerGraphics[id].player, {x: playerGraphics[clientId].player.x + Math.cos(playerGraphics[clientId].sword.angle) * swordRadius / 2, y: playerGraphics[clientId].player.y + Math.sin(playerGraphics[clientId].sword.angle) * swordRadius / 2}) < playerRadius || distance(playerGraphics[id].player, playerGraphics[clientId].player) < 1.7 * playerRadius) {
+                    socket.send(JSON.stringify({
+                        type: 'kill',
+                        killerId: clientId,
+                        victimId: id,
+                    }));
+                //check if players swords collide
+                } else if (doLineSegmentsIntersect(playerGraphics[id].player, playerGraphics[id].sword, playerGraphics[clientId].player, playerGraphics[clientId].sword) || doLineSegmentsIntersect(playerGraphics[id].player, playerGraphics[id].sword, playerGraphics[clientId].sword, playerGraphics[clientId].sword.prev)) {
                     socket.send(JSON.stringify({
                         type: 'collision',
                         id1: clientId,
@@ -392,13 +437,11 @@ import { distance, doLineSegmentsIntersect } from './geometry.js';
                 }
             }
         }
-
-        if (players[clientId]) { // update server with player movement
-            socket.send(JSON.stringify({
-                type: 'move',
-                id: clientId,
-                player: players[clientId],
-            }));
-        }
+        //update server with new client
+        socket.send(JSON.stringify({
+            type: 'move',
+            id: clientId,
+            player: players[clientId],
+        }));
     });
 })();
