@@ -83,8 +83,8 @@ import { distance, doLineSegmentsIntersect, getIntersectionPoint } from './geome
     let targetPosition = { x: app.screen.width / 2, y: app.screen.height / 2 }; // Target position for movement
     
     // Connect to WebSocket server
-    const socket = new WebSocket('ws://localhost:80');
-    //const socket = new WebSocket('wss://superballs.lol');
+    //const socket = new WebSocket('ws://localhost:80');
+    const socket = new WebSocket('wss://superballs.lol');
         
     socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
