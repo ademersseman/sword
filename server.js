@@ -68,5 +68,13 @@ wss.on('connection', (ws) => {
             collisionTimer[data.id2] = Date.now()
             broadcast({ type: 'collision', id1: data.id1, id2: data.id2 });
         }
+
+    });
+
+    // Handle connection close
+    ws.on('close', () => {
+        delete players[clientId]
+        delete collisionTimer[clientId]
+        broadcast({ type: 'kill', victimId: clientId, killerId: clientId });
     });
 });

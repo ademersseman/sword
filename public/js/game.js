@@ -83,8 +83,8 @@ import { distance, doLineSegmentsIntersect, getIntersectionPoint } from './geome
     let targetPosition = { x: app.screen.width / 2, y: app.screen.height / 2 }; // Target position for movement
     
     // Connect to WebSocket server
-    //const socket = new WebSocket('ws://localhost:80');
-    const socket = new WebSocket('wss://superballs.lol');
+    const socket = new WebSocket('ws://localhost:80');
+    //const socket = new WebSocket('wss://superballs.lol');
         
     socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
@@ -128,15 +128,18 @@ import { distance, doLineSegmentsIntersect, getIntersectionPoint } from './geome
                 if (data.killerId === clientId) {
                     players[clientId].killCount += 1
                     players[clientId].rotationSpeed *= -1
+                    updateSwordArc(clientId)
                 }
                 killPlayer(data.victimId)
             }
             if (data.type === 'collision') {
                 players[data.id1].rotationSpeed *= -1
                 players[data.id2].rotationSpeed *= -1
+                updateSwordArc(data.id1)
+                updateSwordArc(data.id2)
                 //calculate the intersection point of 
                 let intersection = getIntersectionPoint(playerGraphics[data.id1].player, playerGraphics[data.id1].sword, playerGraphics[data.id2].player, playerGraphics[data.id2].sword)
-                if (intersection === null) {
+                if (intersection === null && playerGraphics[data.id1].sword.prev) {
                     intersection = getIntersectionPoint(playerGraphics[data.id2].player, playerGraphics[data.id2].sword, playerGraphics[data.id1].sword, playerGraphics[data.id1].sword.prev)
                 }
                 createSparks(intersection ? intersection : playerGraphics[clientId].sword)
@@ -191,7 +194,8 @@ import { distance, doLineSegmentsIntersect, getIntersectionPoint } from './geome
             // Add the button and text to the stage
         });
     }
- 
+
+    // game is initialized with menu
     await menu()
 
     // Create a player and all graphical components
@@ -216,24 +220,25 @@ import { distance, doLineSegmentsIntersect, getIntersectionPoint } from './geome
         sword.y = player.y + Math.sin(players[id].angle) * swordRadius;
         sword.angle = players[id].angle
         sword.filters = new PIXI.BlurFilter({ strength: 1 });
-        
-        const gradientFill = new PIXI.FillGradient(0, 0, 150, 150);
-        
+        // draw players sword arc
         const swordArc = new PIXI.Graphics()
         if (players[id].rotationSpeed > 0) {
+            swordArc.arc(0, 0, swordRadius, 0, -Math.PI/4, true)
+            swordArc.lineTo(0, 0)
+            const gradientFill = new PIXI.FillGradient(0, 0, 1, 1);
             gradientFill.addColorStop(1, 0xFFD700);
             gradientFill.addColorStop(0, 0x252620);
-            swordArc.arc(0, 0, swordRadius, 0, -Math.PI/4, true)
+            swordArc.fill(gradientFill)
         } else {
-            gradientFill.addColorStop(0, 0xFFD700);
-            gradientFill.addColorStop(1, 0x252620);    
             swordArc.arc(0, 0, swordRadius, Math.PI/4, 0, true)
+            swordArc.lineTo(0, 0)
+            const gradientFill = new PIXI.FillGradient(0, 0, 1, -1);
+            gradientFill.addColorStop(1, 0xFFD700);
+            gradientFill.addColorStop(0, 0x252620);
+            swordArc.fill(gradientFill)
         }
-
         swordArc.x = player.x
         swordArc.y = player.y
-        swordArc.lineTo(0, 0)
-        swordArc.fill(gradientFill)
         swordArc.alpha = 0.5
         swordArc.angle = players[id].angle * 360 / (2 * Math.PI)
 
@@ -246,25 +251,8 @@ import { distance, doLineSegmentsIntersect, getIntersectionPoint } from './geome
         playerGraphics[id] = {player, sword, swordArc, killCount};
     }
 
-
-    // Update all players' positions, sword rotation, kill count
-    function updatePlayerGraphic(id) {
-        playerGraphics[id].player.x = app.screen.width / 2 + players[id].x - players[clientId].x
-        playerGraphics[id].player.y = app.screen.height / 2 + players[id].y - players[clientId].y
-        playerGraphics[id].killCount.text = players[id].killCount
-        playerGraphics[id].killCount.x = playerGraphics[id].player.x - playerGraphics[id].killCount.width / 2
-        playerGraphics[id].killCount.y = playerGraphics[id].player.y - playerGraphics[id].killCount.height / 2
-        
-        playerGraphics[id].sword.angle = players[id].angle
-        playerGraphics[id].sword.x = playerGraphics[id].player.x + Math.cos(playerGraphics[id].sword.angle) * swordRadius;
-        playerGraphics[id].sword.y = playerGraphics[id].player.y + Math.sin(playerGraphics[id].sword.angle) * swordRadius;
-        //prev and sword connect to form a line that is used as collision bounds for the sword
-        if (id == clientId) {
-            playerGraphics[clientId].sword.prev = {x: players[clientId].rotationSpeed < 0 ? playerGraphics[clientId].player.x + Math.cos(playerGraphics[clientId].sword.angle + Math.PI / 16) * swordRadius : playerGraphics[clientId].player.x + Math.cos(playerGraphics[clientId].sword.angle - Math.PI / 16) * swordRadius, y: players[clientId].rotationSpeed < 0 ? playerGraphics[clientId].player.y + Math.sin(playerGraphics[clientId].sword.angle + Math.PI / 16) * swordRadius : playerGraphics[clientId].player.y + Math.sin(playerGraphics[clientId].sword.angle - Math.PI / 16) * swordRadius}
-        }
-        playerGraphics[id].sword.rotation = playerGraphics[id].sword.angle + Math.PI / 2
-        
-        //remove and add sword arc again
+    //creates a new sword arc, always called when a player's sword needs to be reflected
+    function updateSwordArc(id) {
         app.stage.removeChild(playerGraphics[id].swordArc);
         playerGraphics[id].swordArc = new PIXI.Graphics()
         if (players[id].rotationSpeed > 0) { // draw the sword arc
@@ -293,7 +281,33 @@ import { distance, doLineSegmentsIntersect, getIntersectionPoint } from './geome
         playerGraphics[id].sword.zIndex = 1
         app.stage.addChild(playerGraphics[id].swordArc);
         app.stage.sortChildren();
+    }
 
+
+    // Update all players' positions, sword rotation, kill count
+    function updatePlayerGraphic(id) {
+        playerGraphics[id].player.x = app.screen.width / 2 + players[id].x - players[clientId].x
+        playerGraphics[id].player.y = app.screen.height / 2 + players[id].y - players[clientId].y
+        playerGraphics[id].killCount.text = players[id].killCount
+        playerGraphics[id].killCount.x = playerGraphics[id].player.x - playerGraphics[id].killCount.width / 2
+        playerGraphics[id].killCount.y = playerGraphics[id].player.y - playerGraphics[id].killCount.height / 2
+        
+        playerGraphics[id].sword.angle = players[id].angle
+        playerGraphics[id].sword.x = playerGraphics[id].player.x + Math.cos(playerGraphics[id].sword.angle) * swordRadius;
+        playerGraphics[id].sword.y = playerGraphics[id].player.y + Math.sin(playerGraphics[id].sword.angle) * swordRadius;
+        //prev and sword connect to form a line that is used as collision bounds for the sword
+        if (id == clientId) {
+            playerGraphics[clientId].sword.prev = {x: players[clientId].rotationSpeed < 0 ? playerGraphics[clientId].player.x + Math.cos(playerGraphics[clientId].sword.angle + Math.PI / 16) * swordRadius : playerGraphics[clientId].player.x + Math.cos(playerGraphics[clientId].sword.angle - Math.PI / 16) * swordRadius, y: players[clientId].rotationSpeed < 0 ? playerGraphics[clientId].player.y + Math.sin(playerGraphics[clientId].sword.angle + Math.PI / 16) * swordRadius : playerGraphics[clientId].player.y + Math.sin(playerGraphics[clientId].sword.angle - Math.PI / 16) * swordRadius}
+        }
+        playerGraphics[id].sword.rotation = playerGraphics[id].sword.angle + Math.PI / 2
+        
+        playerGraphics[id].swordArc.x = playerGraphics[id].player.x
+        playerGraphics[id].swordArc.y = playerGraphics[id].player.y
+        //playerGraphics[id].swordArc.arc(0, 0, swordRadius, Math.PI/4, 0, true)
+        //playerGraphics[id].swordArc.lineTo(0, 0)
+        playerGraphics[id].swordArc.alpha = 0.5
+        playerGraphics[id].swordArc.angle = players[id].angle * 360 / (2 * Math.PI)
+        
         updateLeaderboard()
     }
 
@@ -327,6 +341,7 @@ import { distance, doLineSegmentsIntersect, getIntersectionPoint } from './geome
 
     //executed when a player is killed
     function killPlayer(victimId) {
+        if (!players[victimId]) return
         // Remove the player and sword from the stage
         createSparks(playerGraphics[victimId].player, true, victimId)
         removePlayerGraphic(victimId)
